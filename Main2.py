@@ -1,5 +1,5 @@
 
-
+import time
 from setup import *
 import random
 class Game:
@@ -30,9 +30,9 @@ class Game:
                 "bread": {"price": 10, "description": "Regenerates 10 hunger"},
                 "medkit": {"price": 20, "description": "Regenerates 10 health"}}
         self.all_bodyparts = {"eyes":[
-                                    {"name" : "stalk eyes", "type" : 2, "sprite normal":(stalk_eye_fb, stalk_eye_flip_fb), "sprite angry":(stalk_eye_angry_fb, stalk_eye_angry_flip_fbp) }],
+                                    {"name" : "stalk eyes", "type" : 0, "sprite normal":(stalk_eye_fb, stalk_eye_flip_fb), "sprite angry":(stalk_eye_angry_fb, stalk_eye_angry_flip_fbp) }],
                             "arms":[
-                                   {"name": "crab amrs", "type" : 1, "sprite nomral" : crab_arm_fb}]}
+                                   {"name": "crab amrs", "type" : 1, "sprite normal" : crab_arm_fb}]}
         self.my_bodyparts = []
         self.inv = ["apple", "bread","apple", "bread"]
         self.sel_market_num = 0
@@ -51,8 +51,20 @@ class Game:
         self.growth = 0
         self.growtimer = time.ticks_ms()
         self.main_state = 0
-    def draw_pet(self, oled, fb, x, y):
-        oled.blit(fb, x, y, 0)
+    def draw_pet(self, oled, anim, x, y):
+        if anim == "idle":
+            oled.blit(idleframes[self.slimeframe], x, y, 0)
+        elif anim == "move":
+            oled.blit(moveframes[self.slimeframe], x, y, 0)
+        elif anim == "angry":
+            oled.blit(angryframes[self.slimeframe], x, y, 0)
+        elif anim == "eat":
+            oled.blit(eatframes[self.slimeframe], x, y, 0)
+        for i in self.my_bodyparts:
+            ox = offsets[anim][i["type"]][self.slimeframe][0]
+            oy = offsets[anim][i["type"]][self.slimeframe][1]
+            oled.blit(i["sprite normal"][0],ox,oy,0)
+            oled.blit(i["sprite normal"][1],ox+13,oy,0)             
     def draw_text_block(self, oled, text, x, y):
         max_chars = (self.max_width - x) // 8  # 8px per character
         words = text.split(" ")
@@ -115,14 +127,7 @@ class Game:
         elif self.state == "arms":
             self.display_bodyparts("arms")
         if self.state == "normal":
-            if self.slimestate == "idle":
-                oled.blit(idleframes[self.slimeframe], self.slime_x, self.slime_y)
-            elif self.slimestate == "move":  
-                oled.blit(self.slime_flip[self.slimeframe], self.slime_x, self.slime_y)
-            elif self.slimestate == "eat":
-                oled.blit(eatframes[self.slimeframe], self.slime_x, self.slime_y)  
-            elif self.slimestate == "angry":
-                oled.blit(angryframes[self.slimeframe], self.slime_x, self.slime_y)  
+            self.draw_pet(self.slimestate,self.slime_x,self.slime_y)
         if self.state == "market":
             oled.rect(0,16,128,38,1)
             oled.text("coins: " + str(self.coins), 1, 37, 1)
