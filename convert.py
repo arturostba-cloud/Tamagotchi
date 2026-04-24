@@ -65,6 +65,7 @@ def convert_images(paths):
 
 def collect_paths(path):
     paths = []
+    
 
     if os.path.isfile(path):
         return [path]
@@ -87,4 +88,5 @@ if __name__ == "__main__":
         exit()
 
     paths = collect_paths(sys.argv[1])
+    print("FOUND PATHS:", paths)
     convert_images(paths)

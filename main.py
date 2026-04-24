@@ -19,7 +19,7 @@ class Game:
         self.btn_b_condition = True
         self.hunger = 10
         self.health = 20
-        self.fun = 19
+        self.fun = 0
         self.timehunger = time.ticks_ms()
         self.timefun = time.ticks_ms()
         self.run = True
@@ -29,8 +29,10 @@ class Game:
         self.market = {"apple":{"price": 5, "description": "Regenerates 5 hunger and 1 fun"},
                 "bread": {"price": 10, "description": "Regenerates 10 hunger"},
                 "medkit": {"price": 20, "description": "Regenerates 10 health"}}
-        self.all_bodyparts = {"eyes":[
-                                    {"name" : "stalk eyes", "type" : 0, "sprite normal":(stalk_eye_fb, stalk_eye_flip_fb), "sprite angry":(stalk_eye_angry_fb, stalk_eye_angry_flip_fb) }],
+        self.all_bodyparts = {
+                            "eyes":[
+                                    {"name" : "stalk eyes", "type" : 0, "sprite normal":(stalk_eye_fb, stalk_eye_flip_fb), "sprite angry":(stalk_eye_angry_fb, stalk_eye_angry_flip_fb) },
+                                    {"name" : "eyes", "type" : 1, "sprite normal":(eye_standard_fb, eye_standard_fb), "sprite angry":(eye_standard_angry_fb, eye_standard_angry_flip_fb) }],
                             "arms":[
                                    {"name": "crab amrs", "type" : 1, "sprite normal" : crab_arm_fb}]}
         self.my_bodyparts = []
@@ -48,7 +50,7 @@ class Game:
         self.not_hungry_randomnum = 0
         self.angrytimer = time.ticks_ms() -20000
         self.cooldown = False
-        self.growth = 19
+        self.growth = 20
         self.growtimer = time.ticks_ms()
         self.main_state = 0
     def draw_pet(self, oled, anim, x, y):
@@ -57,20 +59,20 @@ class Game:
         elif anim == "move":
             oled.blit(moveframes[self.slimeframe], x, y, 0)
         elif anim == "move_flip":
-            oled.blit(moveframes_flipped[self.slimeframe], x, y, 0)
+            oled.blit(moveframes[self.slimeframe], x, y, 0)
         elif anim == "angry":
             oled.blit(angryframes[self.slimeframe], x, y, 0)
         elif anim == "eat":
             oled.blit(eatframes[self.slimeframe], x, y, 0)
         for i in self.my_bodyparts:
-            try:
-                ox = offsets[anim][i["type"]][self.slimeframe][0]
-                oy = offsets[anim][i["type"]][self.slimeframe][1]
-            except IndexError:
-                ox = offsets[anim][i["type"]][self.slimeframe-1][0]
-                oy = offsets[anim][i["type"]][self.slimeframe-1][1]
-            oled.blit(i["sprite normal"][0],ox,oy,0)
-            oled.blit(i["sprite normal"][1],ox+13,oy,0)             
+            ox = offsets[anim][i["type"]][self.slimeframe][0]
+            oy = offsets[anim][i["type"]][self.slimeframe][1]
+            if anim == "angry":
+                oled.blit(i["sprite angry"][1],self.slime_x+ox,self.slime_y+oy,0)
+                oled.blit(i["sprite angry"][0],self.slime_x+ox+13,self.slime_y+oy,0)
+            else:
+                oled.blit(i["sprite normal"][1],self.slime_x+ox,self.slime_y+oy,0)
+                oled.blit(i["sprite normal"][0],self.slime_x+ox+13,self.slime_y+oy,0)             
     def draw_text_block(self, oled, text, x, y):
         max_chars = (self.max_width - x) // 8  # 8px per character
         words = text.split(" ")
@@ -121,7 +123,10 @@ class Game:
         oled.blit(apple_fb, 96, 53,0)
         oled.rect(12, 58, 20, 6, 1)
         if self.main_state == 0:
-            oled.blit(apple_fb, 1,1)
+            if self.cooldown:
+                oled.blit(lock_fb, 1,1)
+            else:
+                oled.blit(apple_fb, 1,1)
             oled.blit(basket_fb, 17,1)
         elif self.main_state == 1:
             oled.blit(eye_fb, 1,1)
@@ -252,7 +257,7 @@ class Game:
                 elif self.sel_tab == 1:
                     self.state = "arms"
             elif self.state == "eyes":
-                self.my_bodyparts.append()
+                self.my_bodyparts.append(self.all_bodyparts["eyes"][self.sel_tab])
             self.btn_a_condition = False
         if self.btn_b_condition and btn_b.value() == 0:
             if self.state == "feed" or self.state == "market":
@@ -261,6 +266,10 @@ class Game:
                 self.state = "market"
             elif self.state == "eyes" or self.state == "arms":
                 self.state = "evolution"
+            elif self.state == "evolution":
+                self.state = "normal"
+                self.main_state = 0
+                self.growth = 0
             self.btn_b_condition = False
         if self.btn_left_condition and btn_left.value() == 0:
             if self.state == "normal" or self.state == "evolution":
@@ -292,7 +301,7 @@ class Game:
             self.cooldown = True
 
 
-        if time.ticks_diff(self.now, self.growtimer) > 1000:
+        if time.ticks_diff(self.now, self.growtimer) > 1000000:
             self.growth += 1
             self.growtimer = self.now 
         if len(self.inv) == 0:
@@ -330,16 +339,16 @@ class Game:
         if self.slimestate == "idle":
             self.slimeframe = move_sel_left(self.slimeframe, idleframes)
 
-        elif self.slimestate == "move":
+        elif self.slimestate == "move" or self.slimestate == "move_flip":
             self.slimeframe = move_sel_left(self.slimeframe, moveframes)
             self.slime_x += self.slime_spd
 
             if self.slime_x > 96:
-                self.slime_flip = moveframes_flipped
+                self.slimestate = "move_flip"
                 self.slime_spd = -1
 
             if self.slime_x < 0:
-                self.slime_flip = moveframes
+                self.slimestate = "move"
                 self.slime_spd = 1
         elif self.slimestate == "eat":
             self.state = "normal"
@@ -383,9 +392,10 @@ while game.run:
     game.game_logic()
     game.btn_handling()
     game.draw(oled)
+    print(game.state)
     time.sleep_ms(50) 
 
 if not game.run:
     oled.fill(0)
-    oled.text("you died",0,0)
+    oled.text("you are an idiot",0,0)
     oled.show()
