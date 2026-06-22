@@ -18,26 +18,36 @@ class Game:
         self.btn_a_condition = True
         self.btn_b_condition = True
         self.hunger = 10
-        self.health = 20
+        self.health = 20 
         self.fun = 0
         self.timehunger = time.ticks_ms()
         self.timefun = time.ticks_ms()
         self.run = True
-        self.sel_food_num = 0
-        self.sel_tab = 0 
+        self.sel_tab = 0
         self.coins = 100
-        self.market = {"apple":{"price": 5, "description": "Regenerates 5 hunger and 1 fun"},
-                "bread": {"price": 10, "description": "Regenerates 10 hunger"},
-                "medkit": {"price": 20, "description": "Regenerates 10 health"}}
+        self.sel_item = 0
+        self.sel_market_item = None
+        self.market = {"apple":{"price": 5, "description": "+5 hunger +1 fun"},
+                "bread": {"price": 10, "description": "+10 hunger"},
+                "medkit": {"price": 20, "description": "+10 health"}}
         self.all_bodyparts = {
                             "eyes":[
-                                    {"name" : "stalk eyes", "type" : 0, "sprite normal":(stalk_eye_fb, stalk_eye_flip_fb), "sprite angry":(stalk_eye_angry_fb, stalk_eye_angry_flip_fb) },
-                                    {"name" : "eyes", "type" : 1, "sprite normal":(eye_standard_fb, eye_standard_fb), "sprite angry":(eye_standard_angry_fb, eye_standard_angry_flip_fb) }],
+                                    {"name" : "stalk eyes", 
+                                     "type" : 0, 
+                                     "sprite normal":(stalk_eye_fb, stalk_eye_flip_fb), 
+                                     "sprite angry":(stalk_eye_angry_fb, stalk_eye_angry_flip_fb), 
+                                     "transparency": 0,
+                                     "offset": 13 },
+                                    {"name" : "standard  eyes", 
+                                     "type" : 1, 
+                                     "sprite normal":(eye_standard_fb, eye_standard_fb), 
+                                     "sprite angry":(eye_standard_angry_fb, eye_standard_angry_flip_fb), 
+                                     "transparency": 1,
+                                     "offset": 5  }],
                             "arms":[
                                    {"name": "crab amrs", "type" : 1, "sprite normal" : crab_arm_fb}]}
         self.my_bodyparts = []
         self.inv = ["apple", "bread","apple", "bread"]
-        self.sel_market_num = 0
         self.sel_market_item = None
         self.slimeframe = 0
         self.timewalk = time.ticks_ms()
@@ -55,24 +65,31 @@ class Game:
         self.main_state = 0
     def draw_pet(self, oled, anim, x, y):
         if anim == "idle":
-            oled.blit(idleframes[self.slimeframe], x, y, 0)
+            frames = idleframes
         elif anim == "move":
-            oled.blit(moveframes[self.slimeframe], x, y, 0)
+            frames = moveframes
         elif anim == "move_flip":
-            oled.blit(moveframes[self.slimeframe], x, y, 0)
+            frames = moveframes
         elif anim == "angry":
-            oled.blit(angryframes[self.slimeframe], x, y, 0)
+            frames = angryframes
         elif anim == "eat":
-            oled.blit(eatframes[self.slimeframe], x, y, 0)
+            frames = eatframes
+        else:
+            frames = idleframes
+        self.slimeframe = self.slimeframe % len(frames)
+        oled.blit(frames[self.slimeframe], x, y, 0)
         for i in self.my_bodyparts:
-            ox = offsets[anim][i["type"]][self.slimeframe][0]
-            oy = offsets[anim][i["type"]][self.slimeframe][1]
+            off = offsets[anim][i["type"]]
+            if self.slimeframe >= len(off):
+                continue
+            ox = off[self.slimeframe][0]
+            oy = off[self.slimeframe][1]
             if anim == "angry":
-                oled.blit(i["sprite angry"][1],self.slime_x+ox,self.slime_y+oy,0)
-                oled.blit(i["sprite angry"][0],self.slime_x+ox+13,self.slime_y+oy,0)
+                oled.blit(i["sprite angry"][1],x+ox,y+oy,i["transparency"])
+                oled.blit(i["sprite angry"][0],x+ox+i["offset"],y+oy,i["transparency"])
             else:
-                oled.blit(i["sprite normal"][1],self.slime_x+ox,self.slime_y+oy,0)
-                oled.blit(i["sprite normal"][0],self.slime_x+ox+13,self.slime_y+oy,0)             
+                oled.blit(i["sprite normal"][1],x+ox,y+oy,0)
+                oled.blit(i["sprite normal"][0],x+ox+i["offset"],y+oy,0)             
     def draw_text_block(self, oled, text, x, y):
         max_chars = (self.max_width - x) // 8  # 8px per character
         words = text.split(" ")
@@ -90,21 +107,38 @@ class Game:
         
         if line:
             oled.text(line, x, y + line_num * 10, 1)
-    def display_bodyparts(self,type):
+    def display_bodyparts(self,type,oled):
         oled.rect(48,16,80,32,1)
         for i, part in enumerate(self.all_bodyparts[type]):
             x = 49 + 16*i
             y = 17
             oled.blit(part["sprite normal"][0], x, y)
-
+           #  if i == self.sel_bodypart:
+                #oled.rect()
     def bar(self, x, var,oled):
         for i in range(var-1):
             oled.pixel(x + i, 59, 1)
             oled.pixel(x + i, 60, 1)
             oled.pixel(x + i, 61, 1)
             oled.pixel(x + i, 62, 1)
-
-
+    def draw_menu(self, list, oled, x,y, width , height, distance_x  = 12, distance_y = 12):
+        width = width - (width % distance_x)
+        height = height - (height % distance_y)
+        rows = width // distance_x
+        for i in range(0, len(list)):
+            item = list[i]
+            if item == "apple":
+                item = apple_fb
+            elif item == "bread":
+                item = bread_fb
+            elif item == "medkit":
+                item = medkit_fb
+            item_x = x + (i % rows) * distance_x
+            item_y = y + (i // rows) * distance_y
+            oled.blit(item, item_x, item_y)
+            if i == self.sel_item:
+                oled.rect(item_x, item_y, distance_x, distance_y, 1)
+            oled.rect(x, y, width, height, 1)
     def draw(self, oled):
         oled.fill(0)
         for i in range(0, 2):
@@ -130,53 +164,32 @@ class Game:
             oled.blit(basket_fb, 17,1)
         elif self.main_state == 1:
             oled.blit(eye_fb, 1,1)
-            oled.blit(slime_idle_f1_fb, 16,16)
+            self.draw_pet(oled, "idle",16,16)
         if self.state == "evolution":
             pass
-        if self.state == "eyes":
-            self.display_bodyparts("eyes")
-        elif self.state == "arms":
-            self.display_bodyparts("arms")
+        if self.state == "eyes" or self.state == "arms":
+            body_list = list()
+            for i, part in enumerate(self.all_bodyparts[self.state]):
+                body_list.append(part["sprite normal"][0])
+            self.draw_menu(body_list, oled, 48,16,80,32)
         if self.state == "normal":
             self.draw_pet(oled, self.slimestate,self.slime_x,self.slime_y)
         if self.state == "market":
-            oled.rect(0,16,128,38,1)
             oled.text("coins: " + str(self.coins), 1, 37, 1)
-            keys = list(self.market.keys())   
-            for i in range(0, len(keys)):
-                item = keys[i]          
-                if item == "apple":
-                    oled.blit(apple_fb, 1 + (i % 7) * 32, 17 + (i // 7) * 32)
-                    oled.text(str(self.market[item]["price"]), 17 + (i % 7) * 32, 17 + (i // 7) * 32)
-                if item == "bread":
-                    oled.blit(bread_fb, 1 + (i % 7) * 32, 17 + (i // 7) * 32)
-                    oled.text(str(self.market[item]["price"]), 17 + (i % 7) * 32, 17 + (i // 7) * 32)
-                if item == "medkit":
-                    oled.blit(medkit_fb, 1 + (i % 7) * 32, 17 + (i // 7) * 32)
-                    oled.text(str(self.market[item]["price"]), 17 + (i % 7) * 32, 17 + (i // 7) * 32)
-                if i == self.sel_market_num:
-                    oled.rect(1 + (i % 7) * 32, 17 + (i // 7) * 32, 12, 12, 1)
-                    oled.rect(1 + (i % 7) * 32, 17 + (i // 7) * 32, 12, 12, 1)
+            keys = list(self.marketp.keys())
+            self.draw_menu(keys, oled, 0,16,128,38)
         if self.state == "description":
             oled.rect(0,16,128,38,1)
             oled.text("coins: " + str(self.coins), 1, 37, 1)
             if self.sel_market_item is not None:
+
                 keys = list(self.market.keys())
                 for i in range(0, len(keys)):
                     item = keys[i]
                     if item == self.sel_market_item:
                         self.draw_text_block(oled, self.market[item]["description"], 1, 17)
         if self.state == "feed":
-            oled.rect(0,16,128,38,1)
-            for i in range(0, int(len(self.inv))):
-                if self.inv[i] == "apple":
-                    oled.blit(apple_fb, 1 + (i % 7) * 16, 17 + (i // 7) * 16)
-                if self.inv[i] == "bread":
-                    oled.blit(bread_fb, 1 + (i % 7) * 16, 17 + (i // 7) * 16)
-                if self.inv[i] == "medkit":
-                    oled.blit(medkit_fb, 1 + (i % 7) * 16, 17 + (i // 7) * 16)
-                if i == self.sel_food_num:
-                    oled.rect(1 + (i % 7) * 16, 17 + (i // 7) * 16, 12, 12, 1)
+            self.draw_menu(self.inv, oled, 0,16,128,38)
         if self.food_visible:
             if self.eaten_food == "apple":
                 oled.blit(apple_fb, self.food_x, self.food_y,0)
@@ -206,6 +219,8 @@ class Game:
             self.btn_left_condition = True
         if btn_right.value() == 1:
             self.btn_right_condition = True
+
+        # --A BUTTON--
         if self.btn_a_condition and btn_a.value() == 0:
             if self.state == "normal":
                 if self.sel_tab == 0:
@@ -223,7 +238,6 @@ class Game:
                     if random.randint(1, 100) <= chance_to_succeed:
                         pass
                     else:
-                        # FAIL → refuse
                         self.slimestate = "angry"
                         self.angrytimer = self.now
                         return
@@ -241,9 +255,9 @@ class Game:
                     elif self.sel_food == "medkit":
                         self.eaten_food = "medkit"
                         self.health += 10
-                    self.inv.pop(self.sel_food_num)
-                    if self.sel_food_num >= len(self.inv):
-                        self.sel_food_num = 0
+                    self.inv.pop(self.sel_item)
+                    if self.sel_item >= len(self.inv):
+                        self.sel_item = 0
             elif self.state == "market":
                 self.state = "description"
             elif self.state == "description":
@@ -257,8 +271,11 @@ class Game:
                 elif self.sel_tab == 1:
                     self.state = "arms"
             elif self.state == "eyes":
-                self.my_bodyparts.append(self.all_bodyparts["eyes"][self.sel_tab])
+                self.my_bodyparts.append(self.all_bodyparts["eyes"][0])
             self.btn_a_condition = False
+
+
+        # --B BUTTON--
         if self.btn_b_condition and btn_b.value() == 0:
             if self.state == "feed" or self.state == "market":
                 self.state = "normal"
@@ -270,26 +287,29 @@ class Game:
                 self.state = "normal"
                 self.main_state = 0
                 self.growth = 0
+                self.my_bodyparts.append(self.all_bodyparts["eyes"][1])
             self.btn_b_condition = False
+
+
+        # --LEFT BUTTON--
         if self.btn_left_condition and btn_left.value() == 0:
             if self.state == "normal" or self.state == "evolution":
                 self.sel_tab += 1
                 if self.sel_tab > 1: 
                     self.sel_tab = 0
-            if self.state == "feed":
-                self.sel_food_num = move_sel_left(self.sel_food_num, self.inv)
-            if self.state == "market":
-                self.sel_market_num = move_sel_left(self.sel_market_num, list(self.market.keys()))
+            if self.state == "market" or self.state == "feed" or self.state == "eyes" or self.state == "arms":
+                self.sel_item = (self.sel_item+1) % len(list(self.market.keys()))
             self.btn_left_condition = False
+
+
+        # --RIGHT BUTTON--
         if self.btn_right_condition and btn_right.value() == 0:
             if self.state == "normal "or self.state == "evolution":
                 self.sel_tab -= 1
                 if self.sel_tab < 0:
                     self.sel_tab = 1 
-            if self.state == "feed":
-                self.sel_food_num = move_sel_right(self.sel_food_num, self.inv)
-            if self.state == "market":
-                self.sel_market_num = move_sel_right(self.sel_market_num, list(self.market.keys()))
+            if self.state == "market" or self.state == "feed":
+                self.sel_item = (self.sel_item-1) % len(list(self.market.keys()))
             self.btn_right_condition = False
 
 
@@ -306,16 +326,16 @@ class Game:
             self.growtimer = self.now 
         if len(self.inv) == 0:
             self.sel_food = None
-            self.sel_food_num = 0
+            self.sel_item = 0
         else:
-            self.sel_food_num = self.sel_food_num % len(self.inv)
-            self.sel_food = self.inv[self.sel_food_num]
+            self.sel_item = self.sel_item % len(self.inv)
+            self.sel_food = self.inv[self.sel_item]
         if len(self.market) == 0:
             self.sel_market_item = None
-            self.sel_market_num = 0
+            self.sel_item = 0
         else:
-            self.sel_market_num = self.sel_market_num % len(self.market)
-            self.sel_market_item = list(self.market.keys())[self.sel_market_num]
+            self.sel_item = self.sel_item % len(self.market)
+            self.sel_market_item = list(self.market.keys())[self.sel_item]
         if self.growth == 20 and self.main_state == 0:
             self.main_state = 1
             self.state = "evolution"
@@ -377,25 +397,20 @@ class Game:
 
 
 def move_sel_left(var, item_list):
-    var += 1
-    if var >= len(item_list):
-        var = 0
+    var = (var+1) % len(item_list)
     return var
 
 def move_sel_right(var, item_list):
-    var -= 1
-    if var < 0:
-        var = len(item_list) - 1
+    var = (var-1) % len(item_list)
     return var
 game = Game()
 while game.run:
     game.game_logic()
     game.btn_handling()
     game.draw(oled)
-    print(game.state)
     time.sleep_ms(50) 
-
+name = "1234567890ß!§$%&/()=?"
 if not game.run:
     oled.fill(0)
-    oled.text("you are an idiot",0,0)
+    oled.text(name + "died",0,0)
     oled.show()

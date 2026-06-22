@@ -572,8 +572,6 @@ crab_arm_flip_fb = framebuf.FrameBuffer(crab_arm_flip, 16, 16, framebuf.MONO_VLS
 eye_standard_fb = framebuf.FrameBuffer(eye, 5, 5, framebuf.MONO_VLSB)
 eye_standard_angry_fb = framebuf.FrameBuffer(eye_angry, 5, 5, framebuf.MONO_VLSB)
 eye_standard_angry_flip_fb = framebuf.FrameBuffer(eye_angry_flip, 5, 5, framebuf.MONO_VLSB)
-
-
 moveframes = [slime_move_f1_fb, slime_move_f2_fb, slime_move_f3_fb, slime_move_f4_fb, slime_move_f5_fb, slime_move_f6_fb, slime_move_f7_fb]
 idleframes = [slime_idle_f1_fb, slime_idle_f1_fb, slime_idle_f2_fb, slime_idle_f3_fb, slime_idle_f4_fb, slime_idle_f5_fb] 
 eatframes = [slime_eat_f1_fb, slime_eat_f2_fb, slime_eat_f3_fb, slime_eat_f4_fb, slime_eat_f5_fb, slime_eat_f6_fb, slime_eat_f7_fb, slime_eat_f8_fb, slime_eat_f9_fb, slime_eat_f9_fb, slime_eat_f9_fb,slime_eat_f9_fb,slime_eat_f9_fb,slime_eat_f9_fb,slime_eat_f9_fb,slime_eat_f9_fb,slime_eat_f9_fb,slime_eat_f9_fb,slime_eat_f9_fb,slime_eat_f9_fb]
@@ -583,19 +581,24 @@ oled = sh1106.SH1106_I2C(128, 64, i2c)
 oled.sleep(False)
 offsets = {
     "angry" : [
-        [(0,7), (1,7), (2,7), (1,7), (0,7), (1,7), (2,7), (1,7), (0,7) ]
+        [(0,7), (1,7), (2,7), (1,7), (0,7), (1,7), (2,7), (1,7), (0,7) ],
+        [(13,23), (13,23), (11,23), (11,23), (8,32), (8,32), (11,23), (11,23), (13,23)]
     ],
     "idle": [
-        [(0,7),(0,7), (-1,8), (-1,9), (-1,9), (-1,8)]
+        [(0,7),(0,7), (-1,8), (-1,9), (-1,9), (-1,8)],
+        [(11,23),(11,24),(11,25), (11,25), (11,24), (11,24)]
     ],
     "move": [
-        [(0,6), (0,7),(0,9),(0,10),(0,12),(0,10),(-1,9)]
+        [(0,6), (0,7),(0,9),(0,10),(0,12),(0,10),(-1,9)],
+        [(14,22), (14,23),(14,24),(14,25),(14,25),(14,25),(14,24)]
     ],
     "move_flip": [
-        [(0,6), (0,7),(0,9),(0,10),(0,12),(0,10),(-1,9)]
+        [(0,6), (0,7),(0,9),(0,10),(0,12),(0,10),(-1,9)],
+        [(8,22), (8,23),(8,24),(8,25),(8,25),(8,25),(8,24)]
     ],
     "eat": [
         [(0,6),(0,5),(0,4),(0,3),(0,2),(0,1),(0,0),(0,-1),(0,-1),(0,-1),(0,-1),(0,-1),(0,-1),(0,-1),(0,-1),(0,-1),(0,-1),(0,-1),(0,-1),(0,-1)]
+        [(14,22),(14,21),(14,20),(14,19),(14,18),(14,17),(14,16),(14,15),(14,15),(14,15),(14,15),(14,15),(14,15),(14,15),(14,15),(14,15),(14,15),(14,15),(14,15),(14,15)]
     ]
 }
 btn_left = Pin(16, Pin.IN, Pin.PULL_UP)
